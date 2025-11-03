@@ -1,6 +1,5 @@
 import pandas as pd
 import re
-import os
 import traceback
 import streamlit as st
 from openpyxl import load_workbook
@@ -66,6 +65,9 @@ def safe_read_par(par_file):
             trimmed_parts = [p.strip()[:20] for p in parts]
             processed_lines.append(trimmed_parts)
 
+        # Limit to 11 rows max (rows 6–16)
+        processed_lines = processed_lines[:11]
+
         max_cols = max(len(row) for row in processed_lines)
         normalized_data = [row + [""] * (max_cols - len(row)) for row in processed_lines]
         col_names = [f"Col_{i+1}" for i in range(max_cols)]
@@ -119,13 +121,17 @@ if st.button("Run Conversion"):
             excel_file = "output.xlsx"
 
             with pd.ExcelWriter(excel_file, engine="openpyxl") as writer:
+                # Write placeholder DAT sheet
                 placeholder_headers = ["Time"] + [f"Col{i}" for i in range(2, 101)]
                 pd.DataFrame(columns=placeholder_headers).to_excel(writer, index=False, sheet_name="DAT_Data")
-                df_par.to_excel(writer, index=False, sheet_name="PAR_Data")
+
+                # Write PAR data starting from row 6 (index=5)
+                df_par.to_excel(writer, index=False, sheet_name="PAR_Data", startrow=5)
 
             wb = load_workbook(excel_file)
             ws_dat = wb["DAT_Data"]
             ws_par = wb["PAR_Data"]
+
             process_par_headers(ws_dat, ws_par)
             wb.save(excel_file)
 
